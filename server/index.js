@@ -2,11 +2,13 @@ const express = require("express");
 const upload = require("./upload");
 const multer = require("multer");
 const cors = require("cors");
+const escape = require("sql-template-strings");
+const db = require("./db");
 
 const app = express();
 
 //Add the client URL to the CORS policy
-const whitelist = ["http://localhost:3000"];
+const whitelist = ["http://localhost:3001", "https://fgostar.com"];
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || whitelist.indexOf(origin) !== -1) {
@@ -19,12 +21,19 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-app.post("/upload_file", upload.single("file"), function (req, res) {
+app.post("/upload_file", upload.single("file"), async function (req, res) {
   if (!req.file) {
     //If the file is not uploaded, then throw custom error with message: FILE_MISSING
     throw Error("FILE_MISSING");
   } else {
     //If the file is uploaded, then send a success response.
+    const body = req.body;
+    const columns = await db.query(
+      escape`INSERT INTO resume (fileName, message) VALUES(${req.file.filename}, ${
+        body.message
+      })`
+    );
+    
     res.send({ status: "success" });
   }
 });
@@ -49,7 +58,7 @@ app.use(function (err, req, res, next) {
 });
 
 //Start the server in port 8081
-const server = app.listen(8081, function () {
+const server = app.listen(3000, function () {
   const port = server.address().port;
 
   console.log("App started at http://localhost:%s", port);
